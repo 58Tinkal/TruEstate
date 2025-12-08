@@ -7,7 +7,7 @@ export default function Sidebar() {
         </div>
         <div>
           <div className="font-semibold text-sm">Vault</div>
-          <div className="text-xs text-gray-500">Anurag Yadav</div>
+          <div className="text-xs text-gray-500">Tinkal Kumar</div>
         </div>
       </div>
 

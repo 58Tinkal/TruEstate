@@ -28,14 +28,23 @@ export async function getSales(query) {
   const PAGE_SIZE = 10;
   const mongoQuery = {};
 
-  // 🔍 1. Search: Customer Name + Phone Number (case-insensitive)
-  const searchTerm = search.trim();
+  const searchTerm = String(search || "").trim();
   if (searchTerm) {
-    const regex = new RegExp(searchTerm, "i");
-    mongoQuery.$or = [{ customerName: regex }, { phoneNumber: regex }];
+    try {
+      const escapedSearch = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(escapedSearch, "i");
+      mongoQuery.$or = [
+        { customerName: { $exists: true, $regex: regex } },
+        { phoneNumber: { $exists: true, $regex: regex } }
+      ];
+    } catch (err) {
+      mongoQuery.$or = [
+        { customerName: searchTerm },
+        { phoneNumber: searchTerm }
+      ];
+    }
   }
 
-  // 🧊 2. Filters
   const regionList = parseList(regions);
   const genderList = parseList(genders);
   const categoryList = parseList(categories);
@@ -50,28 +59,105 @@ export async function getSales(query) {
 
   const minAge = ageMin ? Number(ageMin) : null;
   const maxAge = ageMax ? Number(ageMax) : null;
-  if (minAge !== null || maxAge !== null) {
-    mongoQuery.age = {};
-    if (minAge !== null) mongoQuery.age.$gte = minAge;
-    if (maxAge !== null) mongoQuery.age.$lte = maxAge;
+  if (minAge !== null && !isNaN(minAge) && minAge >= 0) {
+    if (!mongoQuery.age) mongoQuery.age = {};
+    mongoQuery.age.$gte = minAge;
+  }
+  if (maxAge !== null && !isNaN(maxAge) && maxAge >= 0) {
+    if (!mongoQuery.age) mongoQuery.age = {};
+    mongoQuery.age.$lte = maxAge;
+  }
+  if (minAge !== null && maxAge !== null && !isNaN(minAge) && !isNaN(maxAge) && minAge > maxAge) {
+    return {
+      data: [],
+      meta: {
+        page: 1,
+        pageSize: PAGE_SIZE,
+        totalItems: 0,
+        totalPages: 1
+      },
+      summary: {
+        totalUnits: 0,
+        totalAmount: 0,
+        totalDiscount: 0
+      }
+    };
   }
 
-  const start = startDate ? new Date(startDate) : null;
-  const end = endDate ? new Date(endDate) : null;
-  if (start || end) {
-    mongoQuery.date = {};
-    if (start) mongoQuery.date.$gte = start;
-    if (end) mongoQuery.date.$lte = end;
+  if (startDate || endDate) {
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+    
+    if (start && isNaN(start.getTime())) {
+      return {
+        data: [],
+        meta: {
+          page: 1,
+          pageSize: PAGE_SIZE,
+          totalItems: 0,
+          totalPages: 1
+        },
+        summary: {
+          totalUnits: 0,
+          totalAmount: 0,
+          totalDiscount: 0
+        }
+      };
+    }
+    if (end && isNaN(end.getTime())) {
+      return {
+        data: [],
+        meta: {
+          page: 1,
+          pageSize: PAGE_SIZE,
+          totalItems: 0,
+          totalPages: 1
+        },
+        summary: {
+          totalUnits: 0,
+          totalAmount: 0,
+          totalDiscount: 0
+        }
+      };
+    }
+
+    if (start && end && start > end) {
+      return {
+        data: [],
+        meta: {
+          page: 1,
+          pageSize: PAGE_SIZE,
+          totalItems: 0,
+          totalPages: 1
+        },
+        summary: {
+          totalUnits: 0,
+          totalAmount: 0,
+          totalDiscount: 0
+        }
+      };
+    }
+
+    if (start || end) {
+      mongoQuery.date = {};
+      if (start) {
+        start.setHours(0, 0, 0, 0);
+        mongoQuery.date.$gte = start;
+      }
+      if (end) {
+        end.setHours(23, 59, 59, 999);
+        mongoQuery.date.$lte = end;
+      }
+    }
   }
 
-  // 🔁 3. Sorting
   const sortMap = {
     date: "date",
     quantity: "quantity",
     customerName: "customerName"
   };
   const sortField = sortMap[sortBy] || "date";
-  const sortDir = sortOrder === "asc" ? 1 : -1;
+  const validSortOrder = sortOrder === "asc" ? 1 : -1;
 
   const pageNum = Math.max(parseInt(page, 10) || 1, 1);
   const skip = (pageNum - 1) * PAGE_SIZE;
@@ -79,23 +165,26 @@ export async function getSales(query) {
   // 📊 4. Query + Summary
   const [rows, total, summaryAgg] = await Promise.all([
     Sale.find(mongoQuery)
-      .sort({ [sortField]: sortDir })
+      .sort({ [sortField]: validSortOrder })
       .skip(skip)
       .limit(PAGE_SIZE),
     Sale.countDocuments(mongoQuery),
     Sale.aggregate([
       { $match: mongoQuery },
       {
+        $project: {
+          quantity: { $ifNull: ["$quantity", 0] },
+          totalAmount: { $ifNull: ["$totalAmount", 0] },
+          finalAmount: { $ifNull: ["$finalAmount", 0] }
+        }
+      },
+      {
         $group: {
           _id: null,
           totalUnits: { $sum: "$quantity" },
-          // Total amount = sum of finalAmount (after discount)
           totalAmount: { $sum: "$finalAmount" },
-          // Total discount = sum(totalAmount - finalAmount)
           totalDiscount: {
-            $sum: {
-              $subtract: ["$totalAmount", "$finalAmount"]
-            }
+            $sum: { $subtract: ["$totalAmount", "$finalAmount"] }
           }
         }
       }

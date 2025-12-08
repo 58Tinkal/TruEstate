@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-100 text-gray-900;
+}
+
+.sidebar-link {
+  @apply flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 cursor-pointer;
+}
+
+.sidebar-link-active {
+  @apply bg-indigo-50 text-indigo-600 font-medium;
+}
+
+.card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col justify-between;
+}

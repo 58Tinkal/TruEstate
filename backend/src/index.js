@@ -7,12 +7,31 @@ import salesRoutes from "./routes/salesRoutes.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.set("trust proxy", 1);
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL,   
+  process.env.FRONTEND_URL_2,
+  "http://localhost:5173",
+].filter(Boolean);   
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"), false);
+    },
+    credentials: true, 
+  })
+);
+
 app.use(express.json());
 
 // Health check
 app.get("/", (_req, res) => {
-  res.send("Sales API is running ✅");
+  res.send("Sales API is running");
 });
 
 // Routes
@@ -27,13 +46,13 @@ app.use((err, _req, res, _next) => {
 async function start() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log("✅ Connected to MongoDB");
+    console.log(" Connected to MongoDB");
 
     app.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);
     });
   } catch (err) {
-    console.error("❌ MongoDB connection failed:", err);
+    console.error(" MongoDB connection failed:", err);
     process.exit(1);
   }
 }

@@ -8,7 +8,6 @@ import Sale from "../models/Sale.js";
 const __dirname = path.resolve();
 const CSV_PATH = process.env.CSV_PATH || path.join(__dirname, "data.csv");
 
-// Try to parse common date formats safely
 function parseDateSafe(rawDate) {
   if (!rawDate) return null;
 
@@ -47,12 +46,12 @@ function parseDateSafe(rawDate) {
 async function seed() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log("✅ Connected to MongoDB");
+    console.log("Connected to MongoDB");
 
     await Sale.deleteMany({});
-    console.log("🧹 Cleared existing sales data");
+    console.log("Cleared existing sales data");
 
-    const BATCH_SIZE = 5000; // adjust if you want
+    const BATCH_SIZE = 5000;
     let batch = [];
     let rowCount = 0;
     let insertedCount = 0;
@@ -69,7 +68,7 @@ async function seed() {
             invalidDateCount++;
             if (invalidDateCount <= 3) {
               console.warn(
-                `⚠️ Invalid date on row ${rowCount}:`,
+                `Invalid date on row ${rowCount}:`,
                 raw["Date"]
               );
             }
@@ -133,11 +132,11 @@ async function seed() {
               .then((res) => {
                 insertedCount += res.length;
                 batch = [];
-                console.log(`💾 Inserted ${insertedCount} docs so far...`);
+                console.log(`Inserted ${insertedCount} docs so far...`);
                 stream.resume();
               })
               .catch((err) => {
-                console.error("❌ Batch insert error:", err);
+                console.error("Batch insert error:", err);
                 reject(err);
               });
           }
@@ -148,17 +147,17 @@ async function seed() {
 
       stream.on("end", async () => {
         try {
-          // flush remaining docs
+     
           if (batch.length > 0) {
             const res = await Sale.insertMany(batch);
             insertedCount += res.length;
           }
 
-          console.log(`📄 Parsed rows: ${rowCount}`);
-          console.log(`💾 Total inserted: ${insertedCount}`);
+          console.log(` Parsed rows: ${rowCount}`);
+          console.log(` Total inserted: ${insertedCount}`);
           if (invalidDateCount > 0) {
             console.log(
-              `⚠️ Rows with invalid dates (stored as null): ${invalidDateCount}`
+              ` Rows with invalid dates (stored as null): ${invalidDateCount}`
             );
           }
 
@@ -169,15 +168,15 @@ async function seed() {
       });
 
       stream.on("error", (err) => {
-        console.error("❌ Stream error:", err);
+        console.error(" Stream error:", err);
         reject(err);
       });
     });
 
-    console.log("✅ Seeding completed successfully");
+    console.log(" Seeding completed successfully");
     process.exit(0);
   } catch (err) {
-    console.error("❌ Seed error:", err);
+    console.error(" Seed error:", err);
     process.exit(1);
   }
 }

@@ -1,10 +1,26 @@
 import MultiSelectDropdown from "./MultiSelectDropdown";
 
 const FILTER_OPTIONS = {
-  regions: ["North", "South", "East", "West"],
+  regions: ["North", "South", "East", "West", "Central"],
   genders: ["Male", "Female", "Other"],
-  categories: ["Clothing", "Electronics", "Grocery", "Other"],
-  tags: ["New", "Sale", "Premium", "Online"],
+  categories: ["Clothing", "Electronics", "Grocery", "Other", "Beauty"],
+  tags: [
+    "organic",
+    "skincare",
+    "portable",
+    "wireless",
+    "gadgets",
+    "casual",
+    "fashion",
+    "unisex",
+    "smart",
+    "accessories",
+    "cotton",
+    "formal",
+    "beauty",
+    "fragrance-free",
+    "makeup",
+  ],
   paymentMethods: ["Cash", "Card", "UPI", "NetBanking"],
 };
 

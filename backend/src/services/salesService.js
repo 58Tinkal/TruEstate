@@ -162,12 +162,12 @@ export async function getSales(query) {
   const pageNum = Math.max(parseInt(page, 10) || 1, 1);
   const skip = (pageNum - 1) * PAGE_SIZE;
 
-  // 📊 4. Query + Summary
   const [rows, total, summaryAgg] = await Promise.all([
     Sale.find(mongoQuery)
       .sort({ [sortField]: validSortOrder })
       .skip(skip)
-      .limit(PAGE_SIZE),
+      .limit(PAGE_SIZE)
+      .lean(),
     Sale.countDocuments(mongoQuery),
     Sale.aggregate([
       { $match: mongoQuery },

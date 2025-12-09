@@ -57,7 +57,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <TopBar query={query} update={update} />
+      <TopBar query={query} update={update} loading={loading} />
 
       {error && (
         <div className="mb-2 text-xs text-red-500">
